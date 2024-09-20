@@ -231,7 +231,7 @@ namespace NSprites
             
             var matField = new ObjectField("material");
             matContainer.Add(matField);
-            matField.value = renderArchetype.Material;
+            matField.value = renderArchetype.RenderParams.material;
             matField.SetEnabled(false);
             matField.objectType = typeof(Material);
 

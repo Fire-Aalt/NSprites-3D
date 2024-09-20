@@ -8,6 +8,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace NSprites
 {
@@ -132,10 +133,8 @@ namespace NSprites
 
         /// id to query entities using <see cref="SpriteRenderID"/>
         internal readonly int ID;
-        internal readonly Material Material;
+        internal readonly RenderParams RenderParams;
         private readonly Mesh _mesh;
-        private readonly Bounds _bounds;
-        private readonly MaterialPropertyBlock _materialPropertyBlock;
         /// <summary> minimum additional capacity we want allocate on exceed </summary>
         private readonly int _minCapacityStep;
 
@@ -179,13 +178,13 @@ namespace NSprites
         internal const int MinIndicesPerJobCount = 8;
 #endif
 
-        public RenderArchetype(Material material, Mesh mesh, in Bounds bounds, IReadOnlyList<PropertyData> propertyDataSet
+        public RenderArchetype(in RenderParams renderParams, Mesh mesh, IReadOnlyList<PropertyData> propertyDataSet
             , IReadOnlyDictionary<int, ComponentType> propertyMap, int id
-            , MaterialPropertyBlock override_MPB = null, int preallocatedSpace = 1, int minCapacityStep = 1)
+            , int preallocatedSpace = 1, int minCapacityStep = 1)
         {
 #if UNITY_EDITOR
-            if (material == null)
-                throw new NSpritesException($"While creating {nameof(RenderArchetype)} ({nameof(id)}: {id}) {nameof(UnityEngine.Material)} {nameof(material)} was null passed");
+            if (renderParams.material == null)
+                throw new NSpritesException($"While creating {nameof(RenderArchetype)} ({nameof(id)}: {id}) {nameof(UnityEngine.Material)} {nameof(renderParams.material)} was null passed");
             if (propertyDataSet == null)
                 throw new NSpritesException($"While creating {nameof(RenderArchetype)} ({nameof(id)}: {id}) {nameof(IReadOnlyList<PropertyData>)} {nameof(propertyDataSet)} was null passed");
             if (preallocatedSpace < 1)
@@ -194,17 +193,19 @@ namespace NSprites
                 throw new NSpritesException($"You're trying to create {nameof(RenderArchetype)} ({nameof(id)}: {id}) with {minCapacityStep} minimum capacity step, which can't be below 1");
 #endif
             ID = id;
-            Material = material;
+            RenderParams = renderParams;
+            if (renderParams.matProps == null)
+            {
+                RenderParams.matProps = new MaterialPropertyBlock();
+            }
             _mesh = mesh;
-            _bounds = bounds;
-            _materialPropertyBlock = override_MPB ?? new();
             _minCapacityStep = minCapacityStep;
 
 #if !NSPRITES_REACTIVE_DISABLE || !NSPRITES_STATIC_DISABLE
             ReactiveAndStaticAllocationCounter.Allocated = preallocatedSpace;
             _createdChunksIndexes_RNL = new ReusableNativeList<int>(0, Allocator.Persistent);
             _reorderedChunksIndexes_RNL = new ReusableNativeList<int>(0, Allocator.Persistent);
-            PointersProperty = new InstancedProperty(Shader.PropertyToID(PropertyPointer.PropertyName), preallocatedSpace, sizeof(int), ComponentType.ReadOnly<PropertyPointer>(), _materialPropertyBlock);
+            PointersProperty = new InstancedProperty(Shader.PropertyToID(PropertyPointer.PropertyName), preallocatedSpace, sizeof(int), ComponentType.ReadOnly<PropertyPointer>(), RenderParams.matProps);
 #endif
 #if !NSPRITES_EACH_UPDATE_DISABLE
             _perEntityPropertiesSpaceCounter.Allocated = preallocatedSpace;
@@ -215,7 +216,7 @@ namespace NSprites
             {
                 var propData = propertyDataSet[propIndex];
                 var propType = propertyMap[propData.PropertyID];
-                var prop = new InstancedProperty(propData.PropertyID, preallocatedSpace, UnsafeUtility.SizeOf(propType.GetManagedType()), propType, _materialPropertyBlock);
+                var prop = new InstancedProperty(propData.PropertyID, preallocatedSpace, UnsafeUtility.SizeOf(propType.GetManagedType()), propType, RenderParams.matProps);
 
                 PropertiesContainer.AddProperty(prop, propData.UpdateMode);
             }
@@ -324,7 +325,7 @@ namespace NSprites
                     {
                         foreach (var prop in props)
                         {
-                            prop.Reallocate(ReactiveAndStaticAllocationCounter.Allocated, _materialPropertyBlock);
+                            prop.Reallocate(ReactiveAndStaticAllocationCounter.Allocated, RenderParams.matProps);
                             SyncByChunks(prop, systemData.PropertyPointerChunk_CTH_RO, systemState.GetDynamicComponentTypeHandle(prop.ComponentType), preReadDependency);
                         }
                     }
@@ -355,7 +356,7 @@ namespace NSprites
 
 #if !NSPRITES_REACTIVE_DISABLE || !NSPRITES_STATIC_DISABLE
                         // reallocate and load all property pointers data
-                        PointersProperty.Reallocate(ReactiveAndStaticAllocationCounter.Allocated, _materialPropertyBlock);
+                        PointersProperty.Reallocate(ReactiveAndStaticAllocationCounter.Allocated, RenderParams.matProps);
                         SyncByQuery(PointersProperty, systemState.GetDynamicComponentTypeHandle(PointersProperty.ComponentType), ref query, preReadDependency);
 #endif
 #if !NSPRITES_REACTIVE_DISABLE
@@ -514,7 +515,7 @@ namespace NSprites
                     // reallocate and reload all data for each-update properties
                     foreach (var prop in PropertiesContainer.EachUpdate)
                     {
-                        prop.Reallocate(_perEntityPropertiesSpaceCounter.Allocated, _materialPropertyBlock);
+                        prop.Reallocate(_perEntityPropertiesSpaceCounter.Allocated, RenderParams.matProps);
                         SyncByQuery(prop, systemState.GetDynamicComponentTypeHandle(prop.ComponentType), ref query, systemData.InputDeps);
                     }
                 }
@@ -572,8 +573,10 @@ namespace NSprites
         /// <summary>Draws instances in quantity based on the number of entities related to this <see cref="RenderArchetype"/>. Call it after <see cref="ScheduleUpdate"/> and <see cref="CompleteUpdate"/>.</summary>
         public void Draw()
         {
-            if(_entityCount != 0)
-                Graphics.DrawMeshInstancedProcedural(_mesh, 0, Material, _bounds, _entityCount, _materialPropertyBlock);
+            if (_entityCount != 0)
+            {
+                Graphics.RenderMeshPrimitives(RenderParams, _mesh, 0, _entityCount);
+            }
         }
         
         /// <summary><inheritdoc cref="CompleteUpdate"/>

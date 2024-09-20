@@ -72,14 +72,13 @@ namespace NSprites
         /// Entity without instanced property component from passed properties will be rendered with uninitialized values (please, initialize entities carefully, because render with uninitialized values can lead to strange visual results).
         /// Though you can use <b><see cref="NSPRITES_PROPERTY_FALLBACK_ENABLE"/></b> directive to enable fallback values, so any chunk without property component will pass default values.
         /// <param name="id">ID of <see cref="SpriteRenderID"/>.<see cref="SpriteRenderID.id"/>. All entities with the same SCD will be updated by registering render archetype. Client should manage uniqueness (or not) of ids by himself.</param>
-        /// <param name="material"><see cref="Material"/> which will be used to render sprites.</param>
-        /// <param name="materialPropertyBlock"><see cref="MaterialPropertyBlock"/> you can pass if you want to do some extra overriding by yourself.</param>
+        /// <param name="renderParams"><see cref="RenderParams"/> which will be used to render sprites.</param>
         /// <param name="propertyDataSet">IDs of StructuredBuffer properties in shader AND <see cref="PropertyUpdateMode"/> for each property.</param>
         /// <param name="initialCapacity">compute buffers initial capacity.</param>
         /// <param name="capacityStep">compute buffers capacity increase step when the current limit on the number of entities is exceeded.</param>
         /// </summary>
-        public void RegisterRender(in int id, Material material, in Bounds bounds, MaterialPropertyBlock materialPropertyBlock = null, in int initialCapacity = 1, in int capacityStep = 1, params PropertyData[] propertyDataSet)
-            => RegisterRender(id, material, Quad, bounds, materialPropertyBlock, initialCapacity, capacityStep, propertyDataSet);
+        public void RegisterRender(in int id, in RenderParams renderParams, in int initialCapacity = 1, in int capacityStep = 1, params PropertyData[] propertyDataSet)
+            => RegisterRender(id, renderParams, Quad, initialCapacity, capacityStep, propertyDataSet);
         
         /// <summary>
         /// Register render, which is combination of Material + set of StructuredBuffer property names in shader.
@@ -87,13 +86,12 @@ namespace NSprites
         /// Entity without instanced property component from passed properties will be rendered with uninitialized values (please, initialize entities carefully, because render with uninitialized values can lead to strange visual results).
         /// Though you can use <b><see cref="NSPRITES_PROPERTY_FALLBACK_ENABLE"/></b> directive to enable fallback values, so any chunk without property component will pass default values.
         /// <param name="id">ID of <see cref="SpriteRenderID"/>.<see cref="SpriteRenderID.id"/>. All entities with the same SCD will be updated by registering render archetype. Client should manage uniqueness (or not) of ids by himself.</param>
-        /// <param name="material"><see cref="Material"/> which will be used to render sprites.</param>
-        /// <param name="materialPropertyBlock"><see cref="MaterialPropertyBlock"/> you can pass if you want to do some extra overriding by yourself.</param>
+        /// <param name="renderParams"><see cref="RenderParams"/> which will be used to render sprites.</param>
         /// <param name="propertyDataSet">IDs of StructuredBuffer properties in shader AND <see cref="PropertyUpdateMode"/> for each property.</param>
         /// <param name="initialCapacity">compute buffers initial capacity.</param>
         /// <param name="capacityStep">compute buffers capacity increase step when the current limit on the number of entities is exceeded.</param>
         /// </summary>
-        public void RegisterRender(in int id, Material material, Mesh mesh, in Bounds bounds, MaterialPropertyBlock materialPropertyBlock = null, in int initialCapacity = 1, in int capacityStep = 1, params PropertyData[] propertyDataSet)
+        public void RegisterRender(in int id, in RenderParams renderParams, Mesh mesh, in int initialCapacity = 1, in int capacityStep = 1, params PropertyData[] propertyDataSet)
         {
 #if UNITY_EDITOR || DEVELOPEMENT_BUILD
             if (RegisteredIds.Contains(id))
@@ -102,7 +100,7 @@ namespace NSprites
                 return;
             }
 #endif
-            RenderArchetypes.Add(new RenderArchetype(material, mesh, bounds, propertyDataSet, PropertyMap, id, materialPropertyBlock, initialCapacity, capacityStep));
+            RenderArchetypes.Add(new RenderArchetype(renderParams, mesh, propertyDataSet, PropertyMap, id, initialCapacity, capacityStep));
             RegisteredIds.Add(id);
         }
     }
