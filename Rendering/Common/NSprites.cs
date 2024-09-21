@@ -55,6 +55,7 @@ namespace NSprites
                 ));
 #endif
         }
+
         /// <summary>
         /// Adds all necessary components for rendering to query:
         /// <br>* <see cref="SpriteRenderID"></see> (empty, should be set on play)</br>
@@ -80,6 +81,7 @@ namespace NSprites
         {
             AddSpriteRenderComponents(entity, entityManager, renderID, hasPointerComponents);
         }
+
         /// <summary><inheritdoc cref="AddSpriteRenderComponents(in EntityQuery, in EntityManager, in int, in bool)"/></summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void AddSpriteRenderComponents(this in EntityManager entityManager, in EntityQuery query, in int renderID = default, in bool hasPointerComponents = true)

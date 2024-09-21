@@ -17,13 +17,20 @@ namespace NSprites
         /// <summary> System's state with all necessary data to pass to <see cref="RenderArchetype"/> to update </summary>
         internal SystemData SystemData;
 
+        public static Entity SingletonEntity { get; private set; }
+
         internal void Dispose()
         {
             foreach (var archetype in RenderArchetypes)
                 archetype.Dispose();
+            SingletonEntity = Entity.Null;
         }
         
-        internal void Initialize() => GatherPropertiesTypes();
+        internal void Initialize(Entity singletonEntity)
+        {
+            SingletonEntity = singletonEntity;
+            GatherPropertiesTypes();
+        }
 
         public bool ContainsRender(in int id) => RegisteredIds.Contains(id);
 

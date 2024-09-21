@@ -19,18 +19,19 @@ namespace NSprites
 #endif
             // instantiate and initialize system data
             var renderArchetypeStorage = new RenderArchetypeStorage{ SystemData = new SystemData { Query = state.GetEntityQuery(NSpritesUtils.GetDefaultComponentTypes()) }};
-            renderArchetypeStorage.Initialize();
-            state.EntityManager.AddComponentObject(state.SystemHandle, renderArchetypeStorage);
+            var entity = state.EntityManager.CreateSingleton(renderArchetypeStorage);
+            renderArchetypeStorage.Initialize(entity);
         }
 
         public void OnDestroy(ref SystemState state)
         {
-            SystemAPI.ManagedAPI.GetComponent<RenderArchetypeStorage>(state.SystemHandle).Dispose();
+            SystemAPI.ManagedAPI.GetComponent<RenderArchetypeStorage>(RenderArchetypeStorage.SingletonEntity).Dispose();
         }
 
         public void OnUpdate(ref SystemState state)
         {
-            var renderArchetypeStorage = SystemAPI.ManagedAPI.GetComponent<RenderArchetypeStorage>(state.SystemHandle);
+            var renderArchetypeStorage =
+                SystemAPI.ManagedAPI.GetComponent<RenderArchetypeStorage>(RenderArchetypeStorage.SingletonEntity);
 #if UNITY_EDITOR
             if (!Application.isPlaying && renderArchetypeStorage.Quad == null)
                 renderArchetypeStorage.Quad = NSpritesUtils.ConstructQuad();
